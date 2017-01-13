@@ -3,14 +3,16 @@ DEPLOY_RUNTIME ?= /disks/patric-common/runtime
 TARGET ?= /tmp/deployment
 include $(TOP_DIR)/tools/Makefile.common
 
-SERVICE_SPEC = 
-SERVICE_NAME = p3_minhash
-SERVICE_PORT = 
+SERVICE_SPEC = Minhash.spec
+SERVICE_NAME = Minhash
+SERVICE_PORT = 7138
 SERVICE_DIR  = $(SERVICE_NAME)
+SERVICE_URL = http://localhost:$(SERVICE_PORT)
 
 PATH := $(DEPLOY_RUNTIME)/build-tools/bin:$(PATH)
 
 SERVICE_PSGI = $(SERVICE_NAME).psgi
+
 TPAGE_ARGS = --define kb_runas_user=$(SERVICE_USER) \
 	--define kb_top=$(TARGET) \
 	--define kb_runtime=$(DEPLOY_RUNTIME) \
@@ -29,7 +31,7 @@ WRAP_PERL_TOOL = wrap_perl
 WRAP_PERL_SCRIPT = bash $(TOOLS_DIR)/$(WRAP_PERL_TOOL).sh
 SRC_PERL = $(wildcard scripts/*.pl)
 
-default: bin
+default: bin compile-typespec 
 
 bin: $(BIN_PERL)
 
@@ -80,5 +82,23 @@ deploy-docs:
 
 
 build-libs:
+
+compile-typespec: Makefile
+	mkdir -p lib/biop3/$(SERVICE_NAME_PY)
+	touch lib/biop3/__init__.py #do not include code in biop3/__init__.py
+	touch lib/biop3/$(SERVICE_NAME_PY)/__init__.py 
+	mkdir -p lib/javascript/$(SERVICE_NAME)
+	compile_typespec \
+		--psgi $(SERVICE_PSGI) \
+		--impl Bio::P3::$(SERVICE_NAME)::%sImpl \
+		--service Bio::P3::$(SERVICE_NAME)::Service \
+		--client Bio::P3::$(SERVICE_NAME)::Client \
+		--py biop3/$(SERVICE_NAME_PY)/client \
+		--js javascript/$(SERVICE_NAME)/Client \
+		--url $(SERVICE_URL) \
+		--enable-retries \
+		$(SERVICE_SPEC) lib
+
+
 
 include $(TOP_DIR)/tools/Makefile.common.rules
