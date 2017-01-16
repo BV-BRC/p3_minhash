@@ -105,9 +105,9 @@ sub new
 
 
 
-=head2 compute_genome_distance
+=head2 compute_genome_distance_for_genome
 
-  $return = $obj->compute_genome_distance($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
+  $return = $obj->compute_genome_distance_for_genome($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
 
 =over 4
 
@@ -157,7 +157,7 @@ $return is a reference to a list where each element is a reference to a list con
 
 =cut
 
-sub compute_genome_distance
+sub compute_genome_distance_for_genome
 {
     my($self, @args) = @_;
 
@@ -166,7 +166,7 @@ sub compute_genome_distance
     if ((my $n = @args) != 6)
     {
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error =>
-							       "Invalid argument count for function compute_genome_distance (received $n, expecting 6)");
+							       "Invalid argument count for function compute_genome_distance_for_genome (received $n, expecting 6)");
     }
     {
 	my($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative) = @args;
@@ -179,30 +179,134 @@ sub compute_genome_distance
         (!ref($include_reference)) or push(@_bad_arguments, "Invalid type for argument 5 \"include_reference\" (value was \"$include_reference\")");
         (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument 6 \"include_representative\" (value was \"$include_representative\")");
         if (@_bad_arguments) {
-	    my $msg = "Invalid arguments passed to compute_genome_distance:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	    my $msg = "Invalid arguments passed to compute_genome_distance_for_genome:\n" . join("", map { "\t$_\n" } @_bad_arguments);
 	    Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-								   method_name => 'compute_genome_distance');
+								   method_name => 'compute_genome_distance_for_genome');
 	}
     }
 
     my $result = $self->{client}->call($self->{url}, $self->{headers}, {
-	method => "Minhash.compute_genome_distance",
+	method => "Minhash.compute_genome_distance_for_genome",
 	params => \@args,
     });
     if ($result) {
 	if ($result->is_error) {
 	    Bio::KBase::Exceptions::JSONRPC->throw(error => $result->error_message,
 					       code => $result->content->{error}->{code},
-					       method_name => 'compute_genome_distance',
+					       method_name => 'compute_genome_distance_for_genome',
 					       data => $result->content->{error}->{error} # JSON::RPC::ReturnObject only supports JSONRPC 1.1 or 1.O
 					      );
 	} else {
 	    return wantarray ? @{$result->result} : $result->result->[0];
 	}
     } else {
-        Bio::KBase::Exceptions::HTTP->throw(error => "Error invoking method compute_genome_distance",
+        Bio::KBase::Exceptions::HTTP->throw(error => "Error invoking method compute_genome_distance_for_genome",
 					    status_line => $self->{client}->status_line,
-					    method_name => 'compute_genome_distance',
+					    method_name => 'compute_genome_distance_for_genome',
+				       );
+    }
+}
+
+
+
+=head2 compute_genome_distance_for_fasta
+
+  $return = $obj->compute_genome_distance_for_fasta($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
+
+=over 4
+
+=item Parameter and return types
+
+=begin html
+
+<pre>
+$ws_fasta_path is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+</pre>
+
+=end html
+
+=begin text
+
+$ws_fasta_path is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+
+=end text
+
+=item Description
+
+
+
+=back
+
+=cut
+
+sub compute_genome_distance_for_fasta
+{
+    my($self, @args) = @_;
+
+# Authentication: optional
+
+    if ((my $n = @args) != 6)
+    {
+	Bio::KBase::Exceptions::ArgumentValidationError->throw(error =>
+							       "Invalid argument count for function compute_genome_distance_for_fasta (received $n, expecting 6)");
+    }
+    {
+	my($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative) = @args;
+
+	my @_bad_arguments;
+        (!ref($ws_fasta_path)) or push(@_bad_arguments, "Invalid type for argument 1 \"ws_fasta_path\" (value was \"$ws_fasta_path\")");
+        (!ref($max_pvalue)) or push(@_bad_arguments, "Invalid type for argument 2 \"max_pvalue\" (value was \"$max_pvalue\")");
+        (!ref($max_distance)) or push(@_bad_arguments, "Invalid type for argument 3 \"max_distance\" (value was \"$max_distance\")");
+        (!ref($max_hits)) or push(@_bad_arguments, "Invalid type for argument 4 \"max_hits\" (value was \"$max_hits\")");
+        (!ref($include_reference)) or push(@_bad_arguments, "Invalid type for argument 5 \"include_reference\" (value was \"$include_reference\")");
+        (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument 6 \"include_representative\" (value was \"$include_representative\")");
+        if (@_bad_arguments) {
+	    my $msg = "Invalid arguments passed to compute_genome_distance_for_fasta:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	    Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
+								   method_name => 'compute_genome_distance_for_fasta');
+	}
+    }
+
+    my $result = $self->{client}->call($self->{url}, $self->{headers}, {
+	method => "Minhash.compute_genome_distance_for_fasta",
+	params => \@args,
+    });
+    if ($result) {
+	if ($result->is_error) {
+	    Bio::KBase::Exceptions::JSONRPC->throw(error => $result->error_message,
+					       code => $result->content->{error}->{code},
+					       method_name => 'compute_genome_distance_for_fasta',
+					       data => $result->content->{error}->{error} # JSON::RPC::ReturnObject only supports JSONRPC 1.1 or 1.O
+					      );
+	} else {
+	    return wantarray ? @{$result->result} : $result->result->[0];
+	}
+    } else {
+        Bio::KBase::Exceptions::HTTP->throw(error => "Error invoking method compute_genome_distance_for_fasta",
+					    status_line => $self->{client}->status_line,
+					    method_name => 'compute_genome_distance_for_fasta',
 				       );
     }
 }
@@ -220,16 +324,16 @@ sub version {
             Bio::KBase::Exceptions::JSONRPC->throw(
                 error => $result->error_message,
                 code => $result->content->{code},
-                method_name => 'compute_genome_distance',
+                method_name => 'compute_genome_distance_for_fasta',
             );
         } else {
             return wantarray ? @{$result->result} : $result->result->[0];
         }
     } else {
         Bio::KBase::Exceptions::HTTP->throw(
-            error => "Error invoking method compute_genome_distance",
+            error => "Error invoking method compute_genome_distance_for_fasta",
             status_line => $self->{client}->status_line,
-            method_name => 'compute_genome_distance',
+            method_name => 'compute_genome_distance_for_fasta',
         );
     }
 }

@@ -28,12 +28,14 @@ has 'config' => (is => 'ro', required => 1, builder => '_build_config');
 our $CallContext;
 
 our %return_counts = (
-        'compute_genome_distance' => 1,
+        'compute_genome_distance_for_genome' => 1,
+        'compute_genome_distance_for_fasta' => 1,
         'version' => 1,
 );
 
 our %method_authentication = (
-        'compute_genome_distance' => 'optional',
+        'compute_genome_distance_for_genome' => 'optional',
+        'compute_genome_distance_for_fasta' => 'optional',
 );
 
 
@@ -41,7 +43,8 @@ sub _build_valid_methods
 {
     my($self) = @_;
     my $methods = {
-        'compute_genome_distance' => 1,
+        'compute_genome_distance_for_genome' => 1,
+        'compute_genome_distance_for_fasta' => 1,
         'version' => 1,
     };
     return $methods;

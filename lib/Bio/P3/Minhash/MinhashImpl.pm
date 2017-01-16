@@ -20,7 +20,8 @@ Minhash
 use Data::Dumper;
 use Bio::KBase::DeploymentConfig;
 use P3DataAPI;
-
+use Bio::P3::Workspace::WorkspaceClientExt;
+    
 #END_HEADER
 
 sub new
@@ -55,9 +56,9 @@ sub new
 
 
 
-=head2 compute_genome_distance
+=head2 compute_genome_distance_for_genome
 
-  $return = $obj->compute_genome_distance($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
+  $return = $obj->compute_genome_distance_for_genome($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
 
 =over 4
 
@@ -109,7 +110,7 @@ $return is a reference to a list where each element is a reference to a list con
 
 =cut
 
-sub compute_genome_distance
+sub compute_genome_distance_for_genome
 {
     my $self = shift;
     my($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative) = @_;
@@ -122,14 +123,14 @@ sub compute_genome_distance
     (!ref($include_reference)) or push(@_bad_arguments, "Invalid type for argument \"include_reference\" (value was \"$include_reference\")");
     (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument \"include_representative\" (value was \"$include_representative\")");
     if (@_bad_arguments) {
-	my $msg = "Invalid arguments passed to compute_genome_distance:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	my $msg = "Invalid arguments passed to compute_genome_distance_for_genome:\n" . join("", map { "\t$_\n" } @_bad_arguments);
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'compute_genome_distance');
+							       method_name => 'compute_genome_distance_for_genome');
     }
 
     my $ctx = $Bio::P3::Minhash::Service::CallContext;
     my($return);
-    #BEGIN compute_genome_distance
+    #BEGIN compute_genome_distance_for_genome
 
     #
     # Use the minhash-search script to do the heavy lifting.
@@ -205,13 +206,162 @@ sub compute_genome_distance
 	push(@$return, [$gid, $dist, $pv, $counts]);
     }
     
-    #END compute_genome_distance
+    #END compute_genome_distance_for_genome
     my @_bad_returns;
     (ref($return) eq 'ARRAY') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
     if (@_bad_returns) {
-	my $msg = "Invalid returns passed to compute_genome_distance:\n" . join("", map { "\t$_\n" } @_bad_returns);
+	my $msg = "Invalid returns passed to compute_genome_distance_for_genome:\n" . join("", map { "\t$_\n" } @_bad_returns);
 	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'compute_genome_distance');
+							       method_name => 'compute_genome_distance_for_genome');
+    }
+    return($return);
+}
+
+
+
+
+=head2 compute_genome_distance_for_fasta
+
+  $return = $obj->compute_genome_distance_for_fasta($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
+
+=over 4
+
+=item Parameter and return types
+
+=begin html
+
+<pre>
+$ws_fasta_path is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+</pre>
+
+=end html
+
+=begin text
+
+$ws_fasta_path is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+
+=end text
+
+
+
+=item Description
+
+
+
+=back
+
+=cut
+
+sub compute_genome_distance_for_fasta
+{
+    my $self = shift;
+    my($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative) = @_;
+
+    my @_bad_arguments;
+    (!ref($ws_fasta_path)) or push(@_bad_arguments, "Invalid type for argument \"ws_fasta_path\" (value was \"$ws_fasta_path\")");
+    (!ref($max_pvalue)) or push(@_bad_arguments, "Invalid type for argument \"max_pvalue\" (value was \"$max_pvalue\")");
+    (!ref($max_distance)) or push(@_bad_arguments, "Invalid type for argument \"max_distance\" (value was \"$max_distance\")");
+    (!ref($max_hits)) or push(@_bad_arguments, "Invalid type for argument \"max_hits\" (value was \"$max_hits\")");
+    (!ref($include_reference)) or push(@_bad_arguments, "Invalid type for argument \"include_reference\" (value was \"$include_reference\")");
+    (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument \"include_representative\" (value was \"$include_representative\")");
+    if (@_bad_arguments) {
+	my $msg = "Invalid arguments passed to compute_genome_distance_for_fasta:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
+							       method_name => 'compute_genome_distance_for_fasta');
+    }
+
+    my $ctx = $Bio::P3::Minhash::Service::CallContext;
+    my($return);
+    #BEGIN compute_genome_distance_for_fasta
+
+
+    #
+    # Use the minhash-search script to do the heavy lifting.
+    #
+
+    my @cmd = ("minhash-search");
+    push(@cmd, "--max-pvalue", $max_pvalue);
+    push(@cmd, "--max-distance", $max_distance);
+
+    my @refs;
+
+    if ($include_reference)
+    {
+	push(@refs, $self->{_reference_genomes_sketch});
+    }
+    if ($include_representative)
+    {
+	push(@refs, $self->{_representative_genomes_sketch});
+    }
+    #
+    # If neither refs nor reps selected, use all genomes.
+    if (!@refs)
+    {
+	push(@refs, $self->{_all_genomes_sketch});
+    }
+
+    push(@cmd, @refs);
+
+    #
+    # Retrive genome data from workspace.
+    #
+
+    my $ws = Bio::P3::Workspace::WorkspaceClientExt->new();
+
+    my $temp_contigs = File::Temp->new();
+    eval {
+	$ws->copy_files_to_handles(1, $ctx->token, [[$ws_fasta_path, $temp_contigs]]);
+    };
+    if ($@)
+    {
+	die "Error copying $ws_fasta_path:\n$@";
+    }
+
+    close($temp_contigs);
+    push(@cmd, "$temp_contigs");
+
+    open(my $p, "-|", @cmd) or die "Cannot run command @cmd: $!";
+
+    my $return = [];
+    my $n = 0;
+    while (<$p>)
+    {
+	last if $n++ > $max_hits;
+
+	chomp;
+	my($gid, $dist, $pv, $counts) = split(/\t/);
+	push(@$return, [$gid, $dist, $pv, $counts]);
+    }
+    
+    #END compute_genome_distance_for_fasta
+    my @_bad_returns;
+    (ref($return) eq 'ARRAY') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
+    if (@_bad_returns) {
+	my $msg = "Invalid returns passed to compute_genome_distance_for_fasta:\n" . join("", map { "\t$_\n" } @_bad_returns);
+	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
+							       method_name => 'compute_genome_distance_for_fasta');
     }
     return($return);
 }

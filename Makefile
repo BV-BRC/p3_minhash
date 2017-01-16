@@ -12,6 +12,7 @@ SERVICE_URL = http://localhost:$(SERVICE_PORT)
 PATH := $(DEPLOY_RUNTIME)/build-tools/bin:$(PATH)
 
 SERVICE_PSGI = $(SERVICE_NAME).psgi
+SERVICE_PSGI_FILE = $(SERVICE_NAME).psgi
 
 TPAGE_ARGS = --define kb_runas_user=$(SERVICE_USER) \
 	--define kb_top=$(TARGET) \
@@ -57,7 +58,7 @@ deploy-scripts:
 		$(WRAP_PERL_SCRIPT) "$(TARGET)/plbin/$$basefile" $(TARGET)/bin/$$base ; \
 	done
 
-deploy-service: deploy-run-scripts deploy-app deploy-config
+deploy-service: deploy-run-scripts deploy-libs
 
 deploy-run-scripts:
 	mkdir -p $(TARGET)/services/$(SERVICE_DIR)
