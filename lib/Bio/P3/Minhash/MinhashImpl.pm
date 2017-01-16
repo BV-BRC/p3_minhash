@@ -328,7 +328,7 @@ sub compute_genome_distance_for_fasta
     # Retrive genome data from workspace.
     #
 
-    my $ws = Bio::P3::Workspace::WorkspaceClientExt->new();
+    my $ws = Bio::P3::Workspace::WorkspaceClientExt->new(undef, token => $ctx->token);
 
     my $temp_contigs = File::Temp->new();
     eval {
