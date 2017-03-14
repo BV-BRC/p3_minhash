@@ -44,7 +44,7 @@ deploy: deploy-client deploy-service
 
 deploy-all: deploy-client deploy-service
 
-deploy-client: 
+deploy-client:  deploy-scripts
 
 deploy-scripts:
 	export KB_TOP=$(TARGET); \
