@@ -12,6 +12,7 @@ my($opt, $usage) = describe_options("%c %o genome-dir sketch-dir",
 				    ["sketch-size|s=i" => "Sketch size", { default => 1000 }],
 				    ["parallel|p=i" => "Run with this many parallel threads", { default => 1 }],
 				    ["batch-size|b=i" => "Size of genome batches to process in a thread", { default => 100 }],
+				    ["dry-run" => "Show the commands that would be run"],
 				    ["help|h" => "Show this help message"]);
 print($usage->text), exit 0 if $opt->help;
 die($usage->text), exit 0 if @ARGV != 2;
@@ -61,6 +62,12 @@ $pl->foreach(\@batches, sub {
 	{
 	    my @cmd = ("mash", "sketch", "-s", $opt->sketch_size, "-o", $sketch, $fna);
 
+	    if ($opt->dry_run)
+	    {
+		print "@cmd\n";
+		next;
+	    }
+		    
 	    my($stdout, $stderr);
 
 	    my $ok = IPC::Run::run(\@cmd, '>', \$stdout, '2>', \$stderr);
