@@ -1,23 +1,18 @@
 package Bio::P3::Minhash::Client;
 
-use JSON::RPC::Client;
 use POSIX;
 use strict;
 use Data::Dumper;
 use URI;
-use Bio::KBase::Exceptions;
+
 my $get_time = sub { time, 0 };
 eval {
     require Time::HiRes;
     $get_time = sub { Time::HiRes::gettimeofday() };
 };
 
-use Bio::KBase::AuthToken;
+use P3AuthToken;
 
-# Client version should match Impl version
-# This is a Semantic Version number,
-# http://semver.org
-our $VERSION = "0.1.0";
 
 =head1 NAME
 
@@ -30,6 +25,7 @@ Bio::P3::Minhash::Client
 
 
 =cut
+
 
 sub new
 {
@@ -85,20 +81,20 @@ sub new
     # We create an auth token, passing through the arguments that we were (hopefully) given.
 
     {
-	my $token = Bio::KBase::AuthToken->new(@args);
+	my $token = P3AuthToken->new(@args);
 	
-	if (!$token->error_message)
+	if (my $token_str = $token->token())
 	{
-	    $self->{token} = $token->token;
-	    $self->{client}->{token} = $token->token;
+	    $self->{token} = $token_str;
+	    $self->{client}->{token} = $token_str;
 	}
     }
 
     my $ua = $self->{client}->ua;	 
     my $timeout = $ENV{CDMI_TIMEOUT} || (30 * 60);	 
     $ua->timeout($timeout);
+    $ua->agent("Bio::P3::Minhash::Client UserAgent");
     bless $self, $class;
-    #    $self->_validate_version();
     return $self;
 }
 
@@ -165,8 +161,7 @@ sub compute_genome_distance_for_genome
 
     if ((my $n = @args) != 6)
     {
-	Bio::KBase::Exceptions::ArgumentValidationError->throw(error =>
-							       "Invalid argument count for function compute_genome_distance_for_genome (received $n, expecting 6)");
+        die "Invalid argument count for function compute_genome_distance_for_genome (received $n, expecting 6)";
     }
     {
 	my($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative) = @args;
@@ -180,8 +175,7 @@ sub compute_genome_distance_for_genome
         (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument 6 \"include_representative\" (value was \"$include_representative\")");
         if (@_bad_arguments) {
 	    my $msg = "Invalid arguments passed to compute_genome_distance_for_genome:\n" . join("", map { "\t$_\n" } @_bad_arguments);
-	    Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-								   method_name => 'compute_genome_distance_for_genome');
+	    die $msg;
 	}
     }
 
@@ -190,20 +184,15 @@ sub compute_genome_distance_for_genome
 	params => \@args,
     });
     if ($result) {
-	if ($result->is_error) {
-	    Bio::KBase::Exceptions::JSONRPC->throw(error => $result->error_message,
-					       code => $result->content->{error}->{code},
-					       method_name => 'compute_genome_distance_for_genome',
-					       data => $result->content->{error}->{error} # JSON::RPC::ReturnObject only supports JSONRPC 1.1 or 1.O
-					      );
+	if ($result->{error}) {
+	    my $msg = $result->{error}->{error} || $result->{error}->{message};
+	    $msg =  $self->{client}->json->encode($msg) if ref($msg);
+	    die "Error $result->{error}->{code} invoking compute_genome_distance_for_genome:\n$msg\n";
 	} else {
-	    return wantarray ? @{$result->result} : $result->result->[0];
+	    return wantarray ? @{$result->{result}} : $result->{result}->[0];
 	}
     } else {
-        Bio::KBase::Exceptions::HTTP->throw(error => "Error invoking method compute_genome_distance_for_genome",
-					    status_line => $self->{client}->status_line,
-					    method_name => 'compute_genome_distance_for_genome',
-				       );
+	die "Error invoking method compute_genome_distance_for_genome: " .  $self->{client}->status_line;
     }
 }
 
@@ -269,8 +258,7 @@ sub compute_genome_distance_for_fasta
 
     if ((my $n = @args) != 6)
     {
-	Bio::KBase::Exceptions::ArgumentValidationError->throw(error =>
-							       "Invalid argument count for function compute_genome_distance_for_fasta (received $n, expecting 6)");
+        die "Invalid argument count for function compute_genome_distance_for_fasta (received $n, expecting 6)";
     }
     {
 	my($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative) = @args;
@@ -284,8 +272,7 @@ sub compute_genome_distance_for_fasta
         (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument 6 \"include_representative\" (value was \"$include_representative\")");
         if (@_bad_arguments) {
 	    my $msg = "Invalid arguments passed to compute_genome_distance_for_fasta:\n" . join("", map { "\t$_\n" } @_bad_arguments);
-	    Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-								   method_name => 'compute_genome_distance_for_fasta');
+	    die $msg;
 	}
     }
 
@@ -294,77 +281,21 @@ sub compute_genome_distance_for_fasta
 	params => \@args,
     });
     if ($result) {
-	if ($result->is_error) {
-	    Bio::KBase::Exceptions::JSONRPC->throw(error => $result->error_message,
-					       code => $result->content->{error}->{code},
-					       method_name => 'compute_genome_distance_for_fasta',
-					       data => $result->content->{error}->{error} # JSON::RPC::ReturnObject only supports JSONRPC 1.1 or 1.O
-					      );
+	if ($result->{error}) {
+	    my $msg = $result->{error}->{error} || $result->{error}->{message};
+	    $msg =  $self->{client}->json->encode($msg) if ref($msg);
+	    die "Error $result->{error}->{code} invoking compute_genome_distance_for_fasta:\n$msg\n";
 	} else {
-	    return wantarray ? @{$result->result} : $result->result->[0];
+	    return wantarray ? @{$result->{result}} : $result->{result}->[0];
 	}
     } else {
-        Bio::KBase::Exceptions::HTTP->throw(error => "Error invoking method compute_genome_distance_for_fasta",
-					    status_line => $self->{client}->status_line,
-					    method_name => 'compute_genome_distance_for_fasta',
-				       );
+	die "Error invoking method compute_genome_distance_for_fasta: " .  $self->{client}->status_line;
     }
 }
 
 
 
-sub version {
-    my ($self) = @_;
-    my $result = $self->{client}->call($self->{url}, $self->{headers}, {
-        method => "Minhash.version",
-        params => [],
-    });
-    if ($result) {
-        if ($result->is_error) {
-            Bio::KBase::Exceptions::JSONRPC->throw(
-                error => $result->error_message,
-                code => $result->content->{code},
-                method_name => 'compute_genome_distance_for_fasta',
-            );
-        } else {
-            return wantarray ? @{$result->result} : $result->result->[0];
-        }
-    } else {
-        Bio::KBase::Exceptions::HTTP->throw(
-            error => "Error invoking method compute_genome_distance_for_fasta",
-            status_line => $self->{client}->status_line,
-            method_name => 'compute_genome_distance_for_fasta',
-        );
-    }
-}
 
-sub _validate_version {
-    my ($self) = @_;
-    my $svr_version = $self->version();
-    my $client_version = $VERSION;
-    my ($cMajor, $cMinor) = split(/\./, $client_version);
-    my ($sMajor, $sMinor) = split(/\./, $svr_version);
-    if ($sMajor != $cMajor) {
-        Bio::KBase::Exceptions::ClientServerIncompatible->throw(
-            error => "Major version numbers differ.",
-            server_version => $svr_version,
-            client_version => $client_version
-        );
-    }
-    if ($sMinor < $cMinor) {
-        Bio::KBase::Exceptions::ClientServerIncompatible->throw(
-            error => "Client minor version greater than Server minor version.",
-            server_version => $svr_version,
-            client_version => $client_version
-        );
-    }
-    if ($sMinor > $cMinor) {
-        warn "New client version available for Bio::P3::Minhash::Client\n";
-    }
-    if ($sMajor == 0) {
-        warn "Bio::P3::Minhash::Client version is $svr_version. API subject to change.\n";
-    }
-}
 
 =head1 TYPES
 
@@ -373,13 +304,35 @@ sub _validate_version {
 =cut
 
 package Bio::P3::Minhash::Client::RpcClient;
-use base 'JSON::RPC::Client';
 use POSIX;
 use strict;
+use LWP::UserAgent;
+use JSON::XS;
 
-#
-# Override JSON::RPC::Client::call because it doesn't handle error returns properly.
-#
+BEGIN {
+    for my $method (qw/uri ua json content_type version id allow_call status_line/) {
+	eval qq|
+	    sub $method {
+		\$_[0]->{$method} = \$_[1] if defined \$_[1];
+		\$_[0]->{$method};
+	    }
+	    |;
+	}
+    }
+
+sub new
+{
+    my($class) = @_;
+
+    my $ua = LWP::UserAgent->new();
+    my $json = JSON::XS->new->allow_nonref->utf8;
+    
+    my $self = {
+	ua => $ua,
+	json => $json,
+    };
+    return bless $self, $class;
+}
 
 sub call {
     my ($self, $uri, $headers, $obj) = @_;
@@ -460,25 +413,33 @@ sub call {
 
     $self->status_line($result->status_line);
 
-    if ($result->is_success) {
+    if ($result->is_success || $result->content_type eq 'application/json') {
 
-        return unless($result->content); # notification?
+	my $txt = $result->content;
 
-        if ($service) {
-            return JSON::RPC::ServiceObject->new($result, $self->json);
-        }
+        return unless($txt); # notification?
 
-        return JSON::RPC::ReturnObject->new($result, $self->json);
-    }
-    elsif ($result->content_type eq 'application/json')
-    {
-        return JSON::RPC::ReturnObject->new($result, $self->json);
+	my $obj = eval { $self->json->decode($txt); };
+
+	if (!$obj)
+	{
+	    die "Error parsing result: $@";
+	}
+
+	return $obj;
     }
     else {
         return;
     }
 }
 
+sub _get {
+    my ($self, $uri) = @_;
+    $self->ua->get(
+		   $uri,
+		   Accept         => 'application/json',
+		  );
+}
 
 sub _post {
     my ($self, $uri, $headers, $obj) = @_;
@@ -492,7 +453,7 @@ sub _post {
             $self->id($obj->{id}) if ($obj->{id}); # if undef, it is notification.
         }
         else {
-            $obj->{id} = $self->id || ($self->id('JSON::RPC::Client'));
+            $obj->{id} = $self->id || ($self->id('JSON::RPC::Legacy::Client'));
         }
     }
     else {

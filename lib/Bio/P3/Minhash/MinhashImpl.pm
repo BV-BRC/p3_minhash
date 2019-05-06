@@ -1,6 +1,5 @@
 package Bio::P3::Minhash::MinhashImpl;
 use strict;
-use Bio::KBase::Exceptions;
 # Use Semantic Versioning (2.0.0-rc.1)
 # http://semver.org 
 our $VERSION = "0.1.0";
@@ -51,16 +50,13 @@ sub new
     }
     return $self;
 }
-
 =head1 METHODS
-
-
-
 =head2 compute_genome_distance_for_genome
 
   $return = $obj->compute_genome_distance_for_genome($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
 
 =over 4
+
 
 =item Parameter and return types
 
@@ -78,7 +74,6 @@ $return is a reference to a list where each element is a reference to a list con
 	1: (distance) a float
 	2: (pvalue) a float
 	3: (counts) a string
-
 </pre>
 
 =end html
@@ -97,13 +92,11 @@ $return is a reference to a list where each element is a reference to a list con
 	2: (pvalue) a float
 	3: (counts) a string
 
-
 =end text
 
 
 
 =item Description
-
 
 
 =back
@@ -124,8 +117,7 @@ sub compute_genome_distance_for_genome
     (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument \"include_representative\" (value was \"$include_representative\")");
     if (@_bad_arguments) {
 	my $msg = "Invalid arguments passed to compute_genome_distance_for_genome:\n" . join("", map { "\t$_\n" } @_bad_arguments);
-	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'compute_genome_distance_for_genome');
+	die $msg;
     }
 
     my $ctx = $Bio::P3::Minhash::Service::CallContext;
@@ -164,7 +156,7 @@ sub compute_genome_distance_for_genome
     #
 
     local $self->{_data_api}->{token} = $ctx->token;
-    print STDERR Dumper($ctx->token);
+    # print STDERR Dumper($ctx->token);
     #
     # If we have a sketch for the given genome in the sketch dir, use it.
     # If the genome is present in the downloads, use those contigs. Otherwise we need to
@@ -193,31 +185,44 @@ sub compute_genome_distance_for_genome
 	push(@cmd, "$tmp");
     }
 
+    # print STDERR Dumper(\@cmd);
     open(my $p, "-|", @cmd) or die "Cannot run command @cmd: $!";
 
     my $return = [];
     my $n = 0;
+    my @vals;
     while (<$p>)
     {
 	last if $n++ > $max_hits;
 
 	chomp;
 	my($gid, $dist, $pv, $counts) = split(/\t/);
-	push(@$return, [$gid, $dist, $pv, $counts]);
+	push(@vals, [$gid, $dist, $pv, $counts]);
     }
-    
+
+    #
+    # Validate existence of returned ids.
+    #
+
+    if (@vals)
+    {
+	my $set = join(",", map { $_->[0] } @vals);
+	
+	my @res = $self->{_data_api}->query('genome', ['in', 'genome_id', "($set)"], ["select", "genome_id"]);
+	my %ok = map { $_->{genome_id} => 1} @res;
+	# print STDERR Dumper(\@res, \%ok);
+	@$return = grep { $ok{$_->[0]} } @vals;
+    }
+	
     #END compute_genome_distance_for_genome
     my @_bad_returns;
     (ref($return) eq 'ARRAY') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
     if (@_bad_returns) {
 	my $msg = "Invalid returns passed to compute_genome_distance_for_genome:\n" . join("", map { "\t$_\n" } @_bad_returns);
-	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'compute_genome_distance_for_genome');
+	die $msg;
     }
     return($return);
 }
-
-
 
 
 =head2 compute_genome_distance_for_fasta
@@ -225,6 +230,7 @@ sub compute_genome_distance_for_genome
   $return = $obj->compute_genome_distance_for_fasta($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative)
 
 =over 4
+
 
 =item Parameter and return types
 
@@ -242,7 +248,6 @@ $return is a reference to a list where each element is a reference to a list con
 	1: (distance) a float
 	2: (pvalue) a float
 	3: (counts) a string
-
 </pre>
 
 =end html
@@ -261,13 +266,11 @@ $return is a reference to a list where each element is a reference to a list con
 	2: (pvalue) a float
 	3: (counts) a string
 
-
 =end text
 
 
 
 =item Description
-
 
 
 =back
@@ -288,8 +291,7 @@ sub compute_genome_distance_for_fasta
     (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument \"include_representative\" (value was \"$include_representative\")");
     if (@_bad_arguments) {
 	my $msg = "Invalid arguments passed to compute_genome_distance_for_fasta:\n" . join("", map { "\t$_\n" } @_bad_arguments);
-	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'compute_genome_distance_for_fasta');
+	die $msg;
     }
 
     my $ctx = $Bio::P3::Minhash::Service::CallContext;
@@ -360,11 +362,11 @@ sub compute_genome_distance_for_fasta
     (ref($return) eq 'ARRAY') or push(@_bad_returns, "Invalid type for return variable \"return\" (value was \"$return\")");
     if (@_bad_returns) {
 	my $msg = "Invalid returns passed to compute_genome_distance_for_fasta:\n" . join("", map { "\t$_\n" } @_bad_returns);
-	Bio::KBase::Exceptions::ArgumentValidationError->throw(error => $msg,
-							       method_name => 'compute_genome_distance_for_fasta');
+	die $msg;
     }
     return($return);
 }
+
 
 
 
@@ -403,8 +405,9 @@ sub version {
     return $VERSION;
 }
 
-=head1 TYPES
 
+
+=head1 TYPES
 
 
 =cut
