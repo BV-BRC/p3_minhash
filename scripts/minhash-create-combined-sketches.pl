@@ -25,18 +25,23 @@ opendir(D, $sketch_dir) or die "Cannot opendir $sketch_dir: $!";
 # Look up reference and representative genome lists.
 #
 
+
+my %repref;
+
 my $api = P3DataAPI->new;
 my @res = $api->query('genome', ['eq','reference_genome', 'Reference'], ['select', 'genome_id']);
 my %refs = map { $_->{genome_id} => 1 } @res;
+$repref{$_->{genome_id}} = 1 foreach @res;
 
 @res = $api->query('genome', ['eq','reference_genome', 'Representative'], ['select', 'genome_id']);
 my %reps = map { $_->{genome_id} => 1} @res;
+$repref{$_->{genome_id}} = 1 foreach @res;
 
 #
 # Enumerate available sketches and build lists for update.
 #
 
-my(@all, @refs, @reps);
+my(@all, @refs, @reps, @repref);
 
 
 my $errs;
@@ -58,6 +63,7 @@ while (my $p = readdir(D))
 	push(@all, $sp);
 	push(@refs, $sp) if delete $refs{$gid};
 	push(@reps, $sp) if delete $reps{$gid};
+	push(@repref, $sp) if delete $repref{$gid};
     }
 }
 
@@ -79,7 +85,8 @@ if (%reps)
 
 pareach [[\@all, "$combined_dir/all"],
 	 [\@refs, "$combined_dir/refs"],
-	 [\@reps, "$combined_dir/reps"]], sub
+	 [\@reps, "$combined_dir/reps"], 
+	 [\@repref, "$combined_dir/repref"]], sub
 {
     my($work) = @_;
     my($files, $out) = @$work;
@@ -97,5 +104,5 @@ pareach [[\@all, "$combined_dir/all"],
     {
 	die "Error running @cmd\n";
     }
-}, { Max_Workers => 3 };
+}, { Max_Workers => 4 };
 
