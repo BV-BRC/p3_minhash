@@ -40,6 +40,14 @@ if ($input =~ /\.msh$/)
 {
     $type = 'sketch';
 }
+elsif ($input =~ /\.fq\.gz$/ || $input =~ /\.fastq\.gz$/)
+{
+	$type = 'fastq';
+}
+elsif ($input =~ /\.gz$/)
+{
+	$type = 'fasta';
+}
 else
 {
     my $l1 = <I>;
