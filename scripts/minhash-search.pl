@@ -22,6 +22,8 @@ die($usage->text) if @ARGV < 2;
 my $input = pop;
 my @refs = @ARGV;
 
+open(I, "<", $input) or die "Cannot open input file $input: $!";
+
 my @err;
 for my $ref (@refs)
 {
@@ -32,23 +34,33 @@ for my $ref (@refs)
 }
 die join("", @err) if @err;
 
-my $type;
-
-open(I, "<", $input) or die "Cannot open input file $input: $!";
+my $type = "";
 
 if ($input =~ /\.msh$/)
 {
     $type = 'sketch';
+} else {
+	my $la = <I>;
+	seek(I, 0, 0);
+	my $hex_string = unpack "H*", substr($la, 0, 2);
+	if ($hex_string eq "1f8b") { # magic constant to check for gzip compression.
+		my @cmd = ("zcat", $input, "|", "head", "-n", "1");
+		open(P, "-|", @cmd) or die "Cannot run @cmd: $!";
+		while (<P>)
+		{
+			chomp;
+			if ($_ =~ /^>/) {
+				$type = 'fasta';
+			}
+		    elsif ($_ =~ /^@/) {
+		    	$type = 'fastq';
+		    }
+		    last;
+		}
+	}
 }
-elsif ($input =~ /\.fq\.gz$/ || $input =~ /\.fastq\.gz$/)
-{
-	$type = 'fastq';
-}
-elsif ($input =~ /\.gz$/)
-{
-	$type = 'fasta';
-}
-else
+
+if ($type eq "")
 {
     my $l1 = <I>;
     
@@ -125,4 +137,3 @@ for my $ent (sort { $a->[3] <=> $b->[3] or $a->[1] <=> $b->[1] or $a->[2] <=> $b
     my($g, undef, undef,  $dist, $pv, $counts) = @$ent;
     print join("\t", $g, $dist, $pv, $counts), "\n";
 }
-
