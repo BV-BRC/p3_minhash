@@ -24,4 +24,30 @@ module Minhash
 		 float pvalue,
 		 string counts>>);
 
+    funcdef compute_genome_distance_for_genome2(string genome_id,
+				    float max_pvalue,
+				    float max_distance,
+				    int max_hits,
+				    int include_reference,
+				    int include_representative,
+				    int bacterial,
+				    int viral)
+	returns (list<tuple<string genome_id,
+		 	    float distance,
+		 	    float pvalue,
+		 	    string counts>>);
+
+    funcdef compute_genome_distance_for_fasta2(string ws_fasta_path,
+					      float max_pvalue,
+					      float max_distance,
+					      int max_hits,
+					      int include_reference,
+					      int include_representative,
+					      int bacterial,
+					      int viral)
+	returns (list<tuple<string genome_id,
+		 float distance,
+		 float pvalue,
+		 string counts>>);
+
 };

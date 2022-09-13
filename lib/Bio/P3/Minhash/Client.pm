@@ -295,6 +295,212 @@ sub compute_genome_distance_for_fasta
 
 
 
+=head2 compute_genome_distance_for_genome2
+
+  $return = $obj->compute_genome_distance_for_genome2($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative, $bacterial, $viral)
+
+=over 4
+
+=item Parameter and return types
+
+=begin html
+
+<pre>
+$genome_id is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$bacterial is an int
+$viral is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+</pre>
+
+=end html
+
+=begin text
+
+$genome_id is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$bacterial is an int
+$viral is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+
+=end text
+
+=item Description
+
+
+
+=back
+
+=cut
+
+sub compute_genome_distance_for_genome2
+{
+    my($self, @args) = @_;
+
+# Authentication: optional
+
+    if ((my $n = @args) != 8)
+    {
+        die "Invalid argument count for function compute_genome_distance_for_genome2 (received $n, expecting 8)";
+    }
+    {
+	my($genome_id, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative, $bacterial, $viral) = @args;
+
+	my @_bad_arguments;
+        (!ref($genome_id)) or push(@_bad_arguments, "Invalid type for argument 1 \"genome_id\" (value was \"$genome_id\")");
+        (!ref($max_pvalue)) or push(@_bad_arguments, "Invalid type for argument 2 \"max_pvalue\" (value was \"$max_pvalue\")");
+        (!ref($max_distance)) or push(@_bad_arguments, "Invalid type for argument 3 \"max_distance\" (value was \"$max_distance\")");
+        (!ref($max_hits)) or push(@_bad_arguments, "Invalid type for argument 4 \"max_hits\" (value was \"$max_hits\")");
+        (!ref($include_reference)) or push(@_bad_arguments, "Invalid type for argument 5 \"include_reference\" (value was \"$include_reference\")");
+        (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument 6 \"include_representative\" (value was \"$include_representative\")");
+        (!ref($bacterial)) or push(@_bad_arguments, "Invalid type for argument 7 \"bacterial\" (value was \"$bacterial\")");
+        (!ref($viral)) or push(@_bad_arguments, "Invalid type for argument 8 \"viral\" (value was \"$viral\")");
+        if (@_bad_arguments) {
+	    my $msg = "Invalid arguments passed to compute_genome_distance_for_genome2:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	    die $msg;
+	}
+    }
+
+    my $result = $self->{client}->call($self->{url}, $self->{headers}, {
+	method => "Minhash.compute_genome_distance_for_genome2",
+	params => \@args,
+    });
+    if ($result) {
+	if ($result->{error}) {
+	    my $msg = $result->{error}->{error} || $result->{error}->{message};
+	    $msg =  $self->{client}->json->encode($msg) if ref($msg);
+	    die "Error $result->{error}->{code} invoking compute_genome_distance_for_genome2:\n$msg\n";
+	} else {
+	    return wantarray ? @{$result->{result}} : $result->{result}->[0];
+	}
+    } else {
+	die "Error invoking method compute_genome_distance_for_genome2: " .  $self->{client}->status_line;
+    }
+}
+
+
+
+=head2 compute_genome_distance_for_fasta2
+
+  $return = $obj->compute_genome_distance_for_fasta2($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative, $bacterial, $viral)
+
+=over 4
+
+=item Parameter and return types
+
+=begin html
+
+<pre>
+$ws_fasta_path is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$bacterial is an int
+$viral is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+</pre>
+
+=end html
+
+=begin text
+
+$ws_fasta_path is a string
+$max_pvalue is a float
+$max_distance is a float
+$max_hits is an int
+$include_reference is an int
+$include_representative is an int
+$bacterial is an int
+$viral is an int
+$return is a reference to a list where each element is a reference to a list containing 4 items:
+	0: (genome_id) a string
+	1: (distance) a float
+	2: (pvalue) a float
+	3: (counts) a string
+
+
+=end text
+
+=item Description
+
+
+
+=back
+
+=cut
+
+sub compute_genome_distance_for_fasta2
+{
+    my($self, @args) = @_;
+
+# Authentication: optional
+
+    if ((my $n = @args) != 8)
+    {
+        die "Invalid argument count for function compute_genome_distance_for_fasta2 (received $n, expecting 8)";
+    }
+    {
+	my($ws_fasta_path, $max_pvalue, $max_distance, $max_hits, $include_reference, $include_representative, $bacterial, $viral) = @args;
+
+	my @_bad_arguments;
+        (!ref($ws_fasta_path)) or push(@_bad_arguments, "Invalid type for argument 1 \"ws_fasta_path\" (value was \"$ws_fasta_path\")");
+        (!ref($max_pvalue)) or push(@_bad_arguments, "Invalid type for argument 2 \"max_pvalue\" (value was \"$max_pvalue\")");
+        (!ref($max_distance)) or push(@_bad_arguments, "Invalid type for argument 3 \"max_distance\" (value was \"$max_distance\")");
+        (!ref($max_hits)) or push(@_bad_arguments, "Invalid type for argument 4 \"max_hits\" (value was \"$max_hits\")");
+        (!ref($include_reference)) or push(@_bad_arguments, "Invalid type for argument 5 \"include_reference\" (value was \"$include_reference\")");
+        (!ref($include_representative)) or push(@_bad_arguments, "Invalid type for argument 6 \"include_representative\" (value was \"$include_representative\")");
+        (!ref($bacterial)) or push(@_bad_arguments, "Invalid type for argument 7 \"bacterial\" (value was \"$bacterial\")");
+        (!ref($viral)) or push(@_bad_arguments, "Invalid type for argument 8 \"viral\" (value was \"$viral\")");
+        if (@_bad_arguments) {
+	    my $msg = "Invalid arguments passed to compute_genome_distance_for_fasta2:\n" . join("", map { "\t$_\n" } @_bad_arguments);
+	    die $msg;
+	}
+    }
+
+    my $result = $self->{client}->call($self->{url}, $self->{headers}, {
+	method => "Minhash.compute_genome_distance_for_fasta2",
+	params => \@args,
+    });
+    if ($result) {
+	if ($result->{error}) {
+	    my $msg = $result->{error}->{error} || $result->{error}->{message};
+	    $msg =  $self->{client}->json->encode($msg) if ref($msg);
+	    die "Error $result->{error}->{code} invoking compute_genome_distance_for_fasta2:\n$msg\n";
+	} else {
+	    return wantarray ? @{$result->{result}} : $result->{result}->[0];
+	}
+    } else {
+	die "Error invoking method compute_genome_distance_for_fasta2: " .  $self->{client}->status_line;
+    }
+}
+
+
+
 
 
 =head1 TYPES
