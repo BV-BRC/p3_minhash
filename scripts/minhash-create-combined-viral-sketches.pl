@@ -15,7 +15,8 @@ use File::Path qw(make_path);
 use File::Temp;
 
 my($opt, $usage) = describe_options("%c %o sketch-dir combined-dir",
-				    ['filter=s%' => "Define a family filter file"],
+				    ['filter=s%' => "Define a family filter file", { default => {} }],
+				    ['taxon-filter=s%' => "Define a taxon filter file", { default => {} }],
 				    ['parallel|p=i' => "Number of processes", { default => 1 }],
 				    ["help|h" => 'Show this help message']);
 print($usage->text), exit 0 if $opt->help;
@@ -39,7 +40,7 @@ print "tmpdir=$tmpdir\n";
 
 my $api = P3DataAPI->new;
 
-goto x;
+# goto x;
 
 my @repref = $api->query("genome",
 			  ["eq", "superkingdom", "Viruses"],
@@ -52,21 +53,23 @@ my @repref = $api->query("genome",
 #
 
 my $repref_tbl = "$tmpdir/repref.viral.msh";
+open(TBL, ">", $repref_tbl) or die "Cannot open $repref_tbl: $!";
 
 for my $ent (@repref)
 {
     my($name,$gid,$len,$family) = @$ent{qw(genome_name genome_id genome_length family)};
 
     my $p = "$sketch_dir/$family/$gid.msh";
-    if (-f $p)
+    if (-s $p)
     {
-	print $repref_tbl "$p\n";
+	print TBL "$p\n";
     }
     else
     {
 	warn "Cannot find ref $name $gid $family\n";
     }
 }
+close(TBL);
 my @cmd = ("mash", "paste", "-l", "$combined_dir/refrep.viral.msh", "$repref_tbl");
 my $ok = run(\@cmd);
 $ok or die "Error $? running paste: @cmd\n";
@@ -76,11 +79,45 @@ $ok or die "Error $? running paste: @cmd\n";
 #
 # We apply genome filters as defined in the --filter parameter.
 #
-x:
+# x:
+
+#
+# Look up private genomes to remove those from the sketches.
+#
+
+my @private = $api->query("genome", ["eq", "public", "false"], ["select", "genome_id"]);
+
+#
+# Also filter out partial viral genomes
+#
+my @partial = $api->query("genome", ["eq", "superkingdom", "Viruses"], ["eq", "genome_status", "Partial"], ["select", "genome_id"]);
+
+my %filter_out = map { $_->{genome_id} => 1 } @private, @partial;
+
 
 my $sched = LPTScheduler->new($opt->parallel);
 
 my %filter = %{$opt->filter};
+
+#
+# Handle taxon filters. These are files that define the set of IDs to be included
+# in the given taxon.
+#
+
+my %taxon_filter;
+while (my($t, $f) = each(%{$opt->taxon_filter}))
+{
+    open(F, "<", $f) or die "cannot open taxon filter file $f for taxon $t: $!";
+    while (<F>)
+    {
+	if (/(\d+\.\d+)/)
+	{
+	    $taxon_filter{$t}->{$1} = 1;
+	}
+    }
+    close(F);
+}
+
 
 opendir(D, $sketch_dir);
 my @fam_subdirs = grep { $_ ne '..' &&  -d "$sketch_dir/$_" } readdir(D);
@@ -124,10 +161,14 @@ for my $fam (sort @fam_subdirs)
     my $n = 0;
     while (my $f = readdir(D))
     {
-	if ($f =~ /(\d+\.\d+).msh/)
+	if ($f =~ /((\d+)\.\d+).msh/)
 	{
 	    my $gid = $1;
+	    my $taxon = $2;
+	    next if $filter_out{$gid};
 	    next if $filter && !$genome_filter{$gid};
+	    my $tf = $taxon_filter{$taxon};
+	    next if $tf && !$tf->{$gid};
 	    print LIST "$sketch_dir/$fam/$f\n";
 	    $n++;
 	}
@@ -191,7 +232,7 @@ for my $c (@combined_sizes)
     }
 }
 
-my $sched = LPTScheduler->new($parallel);
+my $sched = LPTScheduler->new($opt->parallel);
 
 my $n = 1;
 for my $bucket (@buckets)
@@ -199,7 +240,7 @@ for my $bucket (@buckets)
     my($list) = $bucket->{list};
     my $in = join("\n", map { $_->[0] } @$list) . "\n";
 
-    my $out = sprintf("$sketch_dir/all-%02d.msh", $n++);
+    my $out = sprintf("$combined_dir/all-viral-%02d.msh", $n++);
 
     $sched->add_work([$in, $out], $bucket->{size});
 }
