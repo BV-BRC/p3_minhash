@@ -41,6 +41,8 @@ sub new
     $self->{_all_viral_genomes_sketches} = $cfg->setting('all-viral-genomes-sketches');
     $self->{_refrep_viral_genomes_sketch} = $cfg->setting('refrep-viral-genomes-sketch');
 
+    $self->{_all_viral_genomes_sketches} = [$self->{_all_viral_genomes_sketches}] unless ref($self->{_all_viral_genomes_sketches});
+
     $self->{_data_api} = P3DataAPI->new();
     delete $self->{data_api}->{token};
 
