@@ -16,6 +16,7 @@ export TEMPDIR=[% kb_tempdir %]
 [% END %]
 pid_file=$KB_SERVICE_DIR/service.pid
 
+export PERL_LWP_SSL_VERIFY_HOSTNAME=0
 
 [% IF kb_starman_workers -%]
 workers="--workers [% kb_starman_workers %]"

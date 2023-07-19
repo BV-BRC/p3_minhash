@@ -40,7 +40,7 @@ if (@what)
 my @genomes = $api->query("genome",
 			  ["eq", "superkingdom", "Viruses"],
 			  ["select", "genome_name,genome_id,genome_length,family"],
-			  # ["eq", "taxon_id", "2697049"],
+			  ["ne", "taxon_id", "2697049"],
 			  @refsearch,
 			 );
 
@@ -84,6 +84,7 @@ $sched->run(sub { my $path = "/dev/shm/tmp.$$.genomes";
 		    unlink($file);
 		    return;
 		}
+		print "@cmd\n";
 
 		my($stdout, $stderr);
 		

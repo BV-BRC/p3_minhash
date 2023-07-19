@@ -4,7 +4,7 @@ use Bio::P3::Minhash::Service;
 use Plack::Middleware::CrossOrigin;
 use Plack::Builder;
 
-use Carp::Always;
+
 
 my @dispatch;
 

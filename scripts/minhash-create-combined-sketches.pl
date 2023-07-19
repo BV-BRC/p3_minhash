@@ -29,11 +29,11 @@ opendir(D, $sketch_dir) or die "Cannot opendir $sketch_dir: $!";
 my %repref;
 
 my $api = P3DataAPI->new;
-my @res = $api->query('genome', ['eq','reference_genome', 'Reference'], ['select', 'genome_id']);
+my @res = $api->query('genome', ['eq','reference_genome', 'Reference'], ['in', 'superkingdom', '(Bacteria,Archaea)'], ['select', 'genome_id']);
 my %refs = map { $_->{genome_id} => 1 } @res;
 $repref{$_->{genome_id}} = 1 foreach @res;
 
-@res = $api->query('genome', ['eq','reference_genome', 'Representative'], ['select', 'genome_id']);
+@res = $api->query('genome', ['eq','reference_genome', 'Representative'], ['in', 'superkingdom', '(Bacteria,Archaea)'], ['select', 'genome_id']);
 my %reps = map { $_->{genome_id} => 1} @res;
 $repref{$_->{genome_id}} = 1 foreach @res;
 

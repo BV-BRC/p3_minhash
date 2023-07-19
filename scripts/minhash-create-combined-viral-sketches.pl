@@ -59,14 +59,15 @@ for my $ent (@repref)
 {
     my($name,$gid,$len,$family) = @$ent{qw(genome_name genome_id genome_length family)};
 
-    my $p = "$sketch_dir/$family/$gid.msh";
+    my $p = "$sketch_dir/$gid.msh";
+#    my $p = "$sketch_dir/$family/$gid.msh";
     if (-s $p)
     {
 	print TBL "$p\n";
     }
     else
     {
-	warn "Cannot find ref $name $gid $family\n";
+	warn "Cannot find ref $name $gid $family $p\n";
     }
 }
 close(TBL);
