@@ -1,0 +1,11 @@
+[Unit]
+Description=Minhash service
+After=network.target 
+[Service]
+ExecStart=[% kb_top %]/services/[% kb_service_dir %]/start_service
+Type=forking
+User=svcbvbrc
+Group=cels
+
+[Install]
+WantedBy=default.target

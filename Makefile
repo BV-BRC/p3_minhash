@@ -14,9 +14,12 @@ PATH := $(DEPLOY_RUNTIME)/build-tools/bin:$(PATH)
 SERVICE_PSGI = $(SERVICE_NAME).psgi
 SERVICE_PSGI_FILE = $(SERVICE_NAME).psgi
 
+STARMAN_WORKERS = 5
+
 TPAGE_ARGS = --define kb_runas_user=$(SERVICE_USER) \
 	--define kb_top=$(TARGET) \
 	--define kb_runtime=$(DEPLOY_RUNTIME) \
+	--define kb_starman_workers=$(STARMAN_WORKERS) \
 	--define kb_service_name=$(SERVICE_NAME) \
 	--define kb_service_dir=$(SERVICE_DIR) \
 	--define kb_service_port=$(SERVICE_PORT) \
@@ -66,6 +69,7 @@ deploy-run-scripts:
 	chmod +x $(TARGET)/services/$(SERVICE_DIR)/start_service
 	$(TPAGE) $(TPAGE_ARGS) service/stop_service.tt > $(TARGET)/services/$(SERVICE_DIR)/stop_service
 	chmod +x $(TARGET)/services/$(SERVICE_DIR)/stop_service
+	$(TPAGE) $(TPAGE_ARGS) service/minhash.service.tt > $(TARGET)/services/$(SERVICE_DIR)/minhash.service
 	if [ -f service/upstart.tt ] ; then \
 		$(TPAGE) $(TPAGE_ARGS) service/upstart.tt > service/$(SERVICE_NAME).conf; \
 	fi
