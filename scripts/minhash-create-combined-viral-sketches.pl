@@ -210,7 +210,8 @@ my @buckets;
 
 my @combined_sizes = sort { $b->[1] <=> $a->[1] } map { [$_, -s $_] } @combined;
 
-my $max = 8_000_000_000;
+my $max = 20_000_000_000;
+#my $max = 8_000_000_000;
 
 for my $c (@combined_sizes)
 {

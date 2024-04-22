@@ -25,6 +25,8 @@ my $sketch_dir = shift;
 
 opendir(D, $genome_dir) or die "Cannot opendir $genome_dir: $!";
 
+# genome status field shows deprecated, query to create based on that.
+
 my @batches;
 
 my $index = 0;
