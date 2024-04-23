@@ -59,15 +59,19 @@ for my $ent (@repref)
 {
     my($name,$gid,$len,$family) = @$ent{qw(genome_name genome_id genome_length family)};
 
-    my $p = "$sketch_dir/$gid.msh";
-#    my $p = "$sketch_dir/$family/$gid.msh";
-    if (-s $p)
+    my $p1 = "$sketch_dir/$gid.msh";
+    my $p2 = "$sketch_dir/$family/$gid.msh";
+    if (-s $p1)
     {
-	print TBL "$p\n";
+	print TBL "$p1\n";
+    }
+    elsif (-s $p2)
+    {
+	print TBL "$p2\n";
     }
     else
     {
-	warn "Cannot find ref $name $gid $family $p\n";
+	warn "Cannot find ref $name $gid $family $p1 p2\n";
     }
 }
 close(TBL);
@@ -121,7 +125,7 @@ while (my($t, $f) = each(%{$opt->taxon_filter}))
 
 
 opendir(D, $sketch_dir);
-my @fam_subdirs = grep { $_ ne '..' &&  -d "$sketch_dir/$_" } readdir(D);
+my @fam_subdirs = grep { $_ ne '.' && $_ ne '..' &&  -d "$sketch_dir/$_" } readdir(D);
 closedir(D);
 
 my @work;
