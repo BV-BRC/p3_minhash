@@ -111,8 +111,32 @@ my $gsub = sub {
     return 1;
 };
 
+#
+# Enumerate the genomes that belong in the combined sketches.
+#
+# These filters must match the ones minhash-build-sketches.pl applies, or the
+# two scripts disagree about the population and the "missing" tally below
+# becomes noise: before this was aligned, the builder targeted the Good public
+# genomes while this script enumerated every public genome, so it reported a
+# permanent ~330k shortfall that no amount of building would close.
+#
+# They are spelled in RQL here and as raw Solr fq params there, because the two
+# scripts use different P3DataAPI entry points. The correspondence is:
+#
+#   ne(genome_status,Deprecated)  ==  fq => -genome_status:Deprecated
+#   gt(genome_length,0)           ==  fq => genome_length:*
+#
+# Both pairs were verified to return identical counts (1,035,704) as of
+# 2026-09. There is deliberately no shared module holding this list: the
+# Makefile's deploy-client target deploys scripts without libs, so a lib
+# dependency here would break a client-only deployment.
+#
 my @res = $api->query_cb('genome', $gsub,
 			 ['in', 'superkingdom', '(Bacteria,Archaea)'],
+			 ['eq', 'public', 'true'],
+			 ['eq', 'genome_quality', 'Good'],
+			 ['ne', 'genome_status', 'Deprecated'],
+			 ['gt', 'genome_length', '0'],
 			 ['select', 'genome_id,reference_genome,date_inserted']);
 
 close($missing_fh) if $missing_fh;
