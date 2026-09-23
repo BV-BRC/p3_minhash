@@ -71,13 +71,18 @@ for my $ent (@repref)
     }
     else
     {
-	warn "Cannot find ref $name $gid $family $p1 p2\n";
+	warn "Cannot find ref $name $gid $family: neither $p1 nor $p2\n";
     }
 }
 close(TBL);
-my @cmd = ("mash", "paste", "-l", "$combined_dir/refrep.viral.msh", "$repref_tbl");
-my $ok = run(\@cmd);
-$ok or die "Error $? running paste: @cmd\n";
+{
+    open(my $tf, "<", $repref_tbl) or die "Cannot open $repref_tbl: $!";
+    chomp(my @rr = <$tf>);
+    close($tf);
+    @rr = grep { /\S/ } @rr;
+    paste_files("$combined_dir/refrep.viral.msh", \@rr, "$tmpdir")
+	or die "Error pasting the refrep viral sketches\n";
+}
 
 #
 # Now create combined sketches for the families.
@@ -189,14 +194,53 @@ if (%filter)
     die "Unused family filters: " . join(", ", keys(%filter)), "\n";
 }
 
+#
+# Paste each family.
+#
+# A failure here used to die, which killed far more than the family that
+# failed: LPTScheduler packs all the work into $opt->parallel bins and runs one
+# bin per process, so with the default --parallel 1 there is a single bin
+# holding every family, sorted largest first. When Orthomyxoviridae (the
+# largest, and the one that exceeded the mmap limit) died, it took all 354
+# families with it and by-family/ came out empty. Warn and carry on instead, so
+# one bad family costs one family.
+#
 $sched->run(sub {}, sub {
     my($global, $item) = @_;
     my($fam, $name, $combined, $list) = @$item;
-    my @cmd = ("mash", "paste", "-l", $combined, $list);
-    print "$$ Run @cmd\n";
-    my $rc = system(@cmd);
-    $rc == 0 or die "Faile with $rc: @cmd\n";
+
+    open(my $lf, "<", $list) or do { warn "Cannot open $list: $!\n"; return; };
+    chomp(my @files = <$lf>);
+    close($lf);
+    @files = grep { /\S/ } @files;
+
+    if (!@files)
+    {
+	warn "No sketches for family $name, skipping\n";
+	return;
+    }
+
+    print "$$ Paste " . scalar(@files) . " sketches for $name into $combined\n";
+
+    my $ftmp = File::Temp->newdir();
+    paste_files($combined, \@files, "$ftmp")
+	or warn "Paste failed for family $name ($combined)\n";
 });
+
+#
+# Report what did not get built before going on to the bucketing step, which
+# reads every file in @combined. Without this the first missing family surfaces
+# as an opaque mash error ("could not open .../Ackermannviridae.msh") naming a
+# family that was never the problem -- it was just the first one the bucketer
+# happened to touch.
+#
+my @failed = grep { ! -s $_ } @combined;
+if (@failed)
+{
+    warn "\n" . scalar(@failed) . " of " . scalar(@combined) . " family sketches were not built:\n";
+    warn "  $_\n" for @failed;
+    die "Refusing to build the all-viral buckets from an incomplete set.\n";
+}
 
 #
 # We cannot create a single sketch with all the sequences; mash dist crashes.
@@ -258,3 +302,111 @@ $sched->run(sub {}, sub {
     my @cmd = ("mash", "paste", "-l", $out, "/dev/fd/0");
     my $ok = run(\@cmd, "<", \$in);
 });
+
+#
+# mash paste mmaps every input sketch at once, so a paste of more files than
+# vm.max_map_count simply fails:
+#
+#   Error: could not memory-map file .../11320.230343.msh of size 8488
+#
+# Measured on lime (vm.max_map_count = 1048576): 1,000,000 inputs paste fine,
+# 1,100,000 fail. The limit is a count of mappings, not a size -- the file it
+# names is always small and never the problem, which makes the message
+# misleading.
+#
+# Raising the sysctl is the traditional answer (the note at the top of
+# minhash-create-combined-sketches.pl says so) but it does not scale: as of
+# 2026-09 Orthomyxoviridae alone has 2,157,909 sketches, more than twice the
+# limit, and the bacterial "all" paste cleared it by only 12,952.
+#
+# Paste in chunks instead and then paste the chunks. mash paste accepts sketch
+# files as input, so this composes, and the result is identical: verified on a
+# 30,000-sketch sample that one-stage and two-stage pastes agree row for row,
+# ids included.
+#
+sub paste_chunk_size
+{
+    return $ENV{MINHASH_PASTE_CHUNK} if $ENV{MINHASH_PASTE_CHUNK};
+
+    #
+    # Half the limit. mash needs a few hundred mappings of its own and other
+    # things on the box may be competing for the same budget, so do not try to
+    # use all of it.
+    #
+    my $max;
+    if (open(my $fh, "<", "/proc/sys/vm/max_map_count"))
+    {
+	chomp($max = <$fh>);
+	close($fh);
+    }
+    $max = 1048576 unless $max && $max =~ /^\d+$/;
+
+    my $n = int($max / 2);
+    $n = 100_000 if $n < 100_000;
+    return $n;
+}
+
+#
+# Paste @$files into $out (a path with or without the .msh suffix mash adds),
+# chunking if there are too many for one mash invocation. $tmpdir holds the
+# intermediate sketches. Returns 1 on success, 0 on failure.
+#
+sub paste_files
+{
+    my($out, $files, $tmpdir) = @_;
+
+    my $chunk = paste_chunk_size();
+
+    if (@$files <= $chunk)
+    {
+	return run_paste($out, $files);
+    }
+
+    my $n = @$files;
+    my $nchunks = int(($n + $chunk - 1) / $chunk);
+    print STDERR "Pasting $n sketches into $out in $nchunks chunks of up to $chunk\n";
+
+    my $base = $out;
+    $base =~ s,.*/,,;
+    $base =~ s,\.msh$,,;
+
+    my @stage;
+    my @todo = @$files;
+    my $i = 0;
+    while (@todo)
+    {
+	my @part = splice(@todo, 0, $chunk);
+	my $part_out = sprintf("%s/%s.part%03d", $tmpdir, $base, $i++);
+	run_paste($part_out, \@part) or return 0;
+	push(@stage, "$part_out.msh");
+    }
+
+    my $ok = run_paste($out, \@stage);
+
+    #
+    # The intermediates are large (a chunk of 500,000 sketches is ~4 GB), so do
+    # not leave them for the caller's tmpdir cleanup, which in the viral script
+    # is a File::Temp->newdir(CLEANUP => 0) that never fires.
+    #
+    unlink(@stage);
+
+    return $ok;
+}
+
+sub run_paste
+{
+    my($out, $files) = @_;
+
+    my $list = File::Temp->new();
+    print $list "$_\n" foreach @$files;
+    close($list);
+
+    my @cmd = ("mash", "paste", "-l", $out, "$list");
+    my $rc = system(@cmd);
+    if ($rc != 0)
+    {
+	warn "Failed with $rc: @cmd\n";
+	return 0;
+    }
+    return 1;
+}
