@@ -18,6 +18,7 @@ my($opt, $usage) = describe_options("%c %o sketch-dir combined-dir",
 				    ['filter=s%' => "Define a family filter file", { default => {} }],
 				    ['taxon-filter=s%' => "Define a taxon filter file", { default => {} }],
 				    ['parallel|p=i' => "Number of processes", { default => 1 }],
+				    ['skip-existing' => "Reuse a family sketch that already exists in the output directory instead of pasting it again. For resuming an interrupted run; assumes the inputs have not changed"],
 				    ["help|h" => 'Show this help message']);
 print($usage->text), exit 0 if $opt->help;
 die($usage->text) if @ARGV != 2;
@@ -138,6 +139,8 @@ print "Writing to $tmpdir\n";
 
 my $combined_file = "$tmpdir/combined.tbl";
 my @combined;
+my @empty_families;
+my $reused = 0;
 open(COMBINED, ">", $combined_file) or die "Cannot write $combined_file: $!";
 for my $fam (sort @fam_subdirs)
 {
@@ -147,8 +150,6 @@ for my $fam (sort @fam_subdirs)
     my $filter = delete $filter{$fam_name};
 
     my $combined = "$by_family/$fam_name.msh";
-    push(@combined, $combined);
-    print COMBINED "$combined\n";
     my %genome_filter;
     if ($filter)
     {
@@ -185,9 +186,51 @@ for my $fam (sort @fam_subdirs)
 
     }
     close(LIST);
+
+    #
+    # A family can filter down to nothing, and that is not a failure. The
+    # private/partial exclusions above remove whole families: 20 of the 354 in
+    # the 2026-09 build (Alphaormycoviridae, Chiyouviridae, Yaraviridae, ...)
+    # consist entirely of genome_status=Partial genomes. Such a family has
+    # nothing to paste and produces no sketch, so it must not go into @combined
+    # -- otherwise the completeness check below sees a file that was never
+    # supposed to exist and refuses to bucket, which is what happened on the
+    # first run with that check in place.
+    #
+    if ($n == 0)
+    {
+	unlink($list);
+	push(@empty_families, $fam_name);
+	next;
+    }
+
+    push(@combined, $combined);
+    print COMBINED "$combined\n";
+
+    #
+    # --skip-existing lets a run that failed late be resumed without repeating
+    # the family pastes, which are the expensive part. Off by default: a sketch
+    # left over from an earlier run is not re-verified against the current
+    # filters, so it is only safe when you know the inputs have not changed.
+    #
+    if ($opt->skip_existing && -s $combined)
+    {
+	print "Reusing existing $combined\n";
+	$reused++;
+	next;
+    }
+
     $sched->add_work([$fam, $fam_name, $combined, $list], $n);
 }
 close(COMBINED);
+
+if (@empty_families)
+{
+    printf "%d famil%s had no sketches left after filtering and were skipped: %s\n",
+	scalar @empty_families, (@empty_families == 1 ? "y" : "ies"),
+	join(", ", @empty_families);
+}
+print "Reusing $reused existing family sketch(es)\n" if $reused;
 
 if (%filter)
 {
@@ -233,6 +276,10 @@ $sched->run(sub {}, sub {
 # as an opaque mash error ("could not open .../Ackermannviridae.msh") naming a
 # family that was never the problem -- it was just the first one the bucketer
 # happened to touch.
+#
+#
+# @combined now holds only families that had at least one sketch to paste, so
+# anything missing here really did fail rather than merely being empty.
 #
 my @failed = grep { ! -s $_ } @combined;
 if (@failed)
