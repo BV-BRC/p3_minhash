@@ -10,12 +10,8 @@ use File::Temp;
 use File::Slurp;
 use Class::Load qw();
 use Config::Simple;
+use Time::HiRes qw(gettimeofday);
 
-my $get_time = sub { time, 0 };
-eval {
-    require Time::HiRes;
-    $get_time = sub { Time::HiRes::gettimeofday(); };
-};
 
 use P3AuthToken;
 use P3TokenValidator;
@@ -38,6 +34,8 @@ our %return_counts = (
         'compute_genome_distance_for_fasta' => 1,
         'compute_genome_distance_for_genome2' => 1,
         'compute_genome_distance_for_fasta2' => 1,
+        'compute_genome_distance_for_sra' => 1,
+        'compute_genome_distance_for_sra2' => 1,
         'version' => 1,
 );
 
@@ -46,6 +44,8 @@ our %method_authentication = (
         'compute_genome_distance_for_fasta' => 'optional',
         'compute_genome_distance_for_genome2' => 'optional',
         'compute_genome_distance_for_fasta2' => 'optional',
+        'compute_genome_distance_for_sra' => 'optional',
+        'compute_genome_distance_for_sra2' => 'optional',
 );
 
 sub _build_validator
@@ -64,6 +64,8 @@ sub _build_valid_methods
         'compute_genome_distance_for_fasta' => 1,
         'compute_genome_distance_for_genome2' => 1,
         'compute_genome_distance_for_fasta2' => 1,
+        'compute_genome_distance_for_sra' => 1,
+        'compute_genome_distance_for_sra2' => 1,
         'version' => 1,
     };
     return $methods;
@@ -277,7 +279,7 @@ sub call_method {
 	{
 	    $self->{hostname} ||= $g_hostname;
 
-	    my ($t, $us) = &$get_time();
+	    my ($t, $us) = gettimeofday;
 	    $us = sprintf("%06d", $us);
 	    my $ts = strftime("%Y-%m-%dT%H:%M:%S.${us}Z", gmtime $t);
 	    $tag = "S:$self->{hostname}:$$:$ts";
@@ -288,7 +290,7 @@ sub call_method {
 	local $ENV{KBRPC_METADATA} = $kb_metadata if $kb_metadata;
 	local $ENV{KBRPC_ERROR_DEST} = $kb_errordest if $kb_errordest;
 
-	my $stderr = Bio::P3::Minhash::ServiceStderrWrapper->new($ctx, $get_time);
+	my $stderr = Bio::P3::Minhash::ServiceStderrWrapper->new($ctx);
 	$ctx->stderr($stderr);
 
 	#
@@ -447,9 +449,8 @@ use Time::HiRes 'gettimeofday';
 
 sub new
 {
-    my($class, $ctx, $get_time) = @_;
+    my($class, $ctx) = @_;
     my $self = {
-	get_time => $get_time,
     };
     my $dest = $ENV{KBRPC_ERROR_DEST} if exists $ENV{KBRPC_ERROR_DEST};
     my $tag = $ENV{KBRPC_TAG} if exists $ENV{KBRPC_TAG};
@@ -532,7 +533,7 @@ sub redirect_both
 sub timestamp
 {
     my($self) = @_;
-    my ($t, $us) = $self->{get_time}->();
+    my ($t, $us) = gettimeofday;
     $us = sprintf("%06d", $us);
     my $ts = strftime("%Y-%m-%dT%H:%M:%S.${us}Z", gmtime $t);
     return $ts;
