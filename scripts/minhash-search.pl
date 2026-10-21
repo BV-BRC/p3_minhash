@@ -9,6 +9,7 @@
 use strict;
 use GenomeTypeObject;
 use Getopt::Long::Descriptive;
+use File::Basename;
 use Data::Dumper;
 
 my($opt, $usage) = describe_options("%c %o reference-database [reference-database ... ] input-file",
@@ -127,7 +128,15 @@ for my $ref (@refs)
     {
 	chomp;
 	my($ref_file, $me, $dist, $pv, $counts) = split(/\t/);
-	my($g, $tax, $idx) = $ref_file =~ m,genomes/((\d+)\.(\d+)),;
+
+	my $g = genome_id_from_sketch_id($ref_file);
+	if (!defined($g))
+	{
+	    warn "Cannot determine a genome id from sketch id '$ref_file'\n";
+	    next;
+	}
+
+	my($tax, $idx) = split(/\./, $g);
 	push(@vals, [$g, $tax, $idx, $dist, $pv, $counts]);
     }
 }
@@ -136,4 +145,42 @@ for my $ent (sort { $a->[3] <=> $b->[3] or $a->[1] <=> $b->[1] or $a->[2] <=> $b
 {
     my($g, undef, undef,  $dist, $pv, $counts) = @$ent;
     print join("\t", $g, $dist, $pv, $counts), "\n";
+}
+
+#
+# Recover the genome id from the id mash reports for a reference sketch.
+#
+# There are two forms in circulation, and both have to keep working:
+#
+#  - Sketches built before 2026-09 record the path of the fasta they were built
+#    from, e.g. /vol/patric3/downloads/genomes/196024.85/196024.85.fna. All
+#    889,929 sketches in the production tree, and everything pasted into
+#    combined/all.msh, are this form. The viral builder produces it too, by
+#    sketching out of a scratch directory deliberately named ".../tmp.$$.genomes".
+#
+#  - Sketches built by the current minhash-build-sketches.pl stamp the bare
+#    genome id with "mash sketch -I", so their identity no longer depends on
+#    where the fasta happened to live. That matters because contigs fetched from
+#    the data API for genomes absent from the downloads tree have no natural
+#    home under a "genomes/" path, and under the old scheme such a sketch would
+#    be built, pasted, and then silently dropped here.
+#
+# The path form is tried first because a path contains the bare form as a
+# substring. The last resort is the basename, anchored, which covers a
+# per-genome file in some other layout. Returning undef makes the caller warn;
+# the previous code let an unmatched id through as undef and dropped the hit
+# without saying anything.
+#
+sub genome_id_from_sketch_id
+{
+    my($id) = @_;
+
+    my($g) = $id =~ m,genomes/(\d+\.\d+),;
+    return $g if defined $g;
+
+    ($g) = $id =~ m,^(\d+\.\d+)$,;
+    return $g if defined $g;
+
+    ($g) = basename($id) =~ m,^(\d+\.\d+)(?:\.(?:msh|fna))?$,;
+    return $g;
 }
