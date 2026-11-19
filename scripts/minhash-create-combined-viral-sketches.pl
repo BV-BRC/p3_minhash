@@ -103,7 +103,18 @@ my @private = $api->query("genome", ["eq", "public", "false"], ["select", "genom
 #
 my @partial = $api->query("genome", ["eq", "superkingdom", "Viruses"], ["eq", "genome_status", "Partial"], ["select", "genome_id"]);
 
-my %filter_out = map { $_->{genome_id} => 1 } @private, @partial;
+#
+# And deprecated ones: superseded or withdrawn upstream, so a neighbour that is
+# one points at a genome the site no longer shows.
+#
+# minhash-build-viral-sketches.pl no longer sketches these, but that only
+# covers sketches made from now on -- a sketch directory carried forward from
+# an earlier run still holds them, and --skip-existing is built to reuse it.
+# This is the filter that keeps them out of the pasted result either way.
+#
+my @deprecated = $api->query("genome", ["eq", "superkingdom", "Viruses"], ["eq", "genome_status", "Deprecated"], ["select", "genome_id"]);
+
+my %filter_out = map { $_->{genome_id} => 1 } @private, @partial, @deprecated;
 
 
 my $sched = LPTScheduler->new($opt->parallel);

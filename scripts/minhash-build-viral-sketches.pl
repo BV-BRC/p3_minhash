@@ -37,10 +37,23 @@ if (@what)
     push(@refsearch, ["in", "reference_genome", "(" . join(",", @what) . ")"]);
 }
 
+#
+# Deprecated genomes have been superseded or withdrawn upstream, so a Mash
+# neighbour that is one sends the user to a genome the site no longer shows.
+# 702,603 of the public viral genomes are Deprecated (4.5%), so this is also
+# a large amount of sketching not to do.
+#
+# The combiner filters them too. Both are needed and neither is redundant:
+# this keeps new ones from being sketched, and the combiner keeps ones that
+# earlier runs already sketched out of the pasted result. Same belt-and-braces
+# as the bacterial path, where minhash-build-sketches.pl and
+# minhash-create-combined-sketches.pl both carry the filter.
+#
 my @genomes = $api->query("genome",
 			  ["eq", "superkingdom", "Viruses"],
 			  ["select", "genome_name,genome_id,genome_length,family"],
 			  ["ne", "taxon_id", "2697049"],
+			  ["ne", "genome_status", "Deprecated"],
 			  @refsearch,
 			 );
 
